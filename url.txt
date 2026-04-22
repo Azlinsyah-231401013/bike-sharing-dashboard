@@ -1,2 +1,2 @@
 Dashboard Streamlit Cloud : https://bike-sharing-dashboard-baru-azlin.streamlit.app/
-Repository GitHub : https://github.com/Azlinsyah-231401013/bike-sharing-dashboard
+Repository GitHub : https://github.com/Azlinsyah-231401013/bike-sharing-dashboard-baru
