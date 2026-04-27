@@ -8,7 +8,7 @@ Proyek ini merupakan submission akhir untuk kelas **Belajar Analisis Data dengan
 2. Bagaimana perbandingan perilaku peminjaman antara pengguna kasual dan pengguna terdaftar pada hari kerja dibandingkan hari libur/akhir pekan?
 
 ## Struktur Direktori
-- `/data`: Direktori ini berisi dataset mentah (`day.csv` dan `hour.csv`) yang digunakan dalam proyek.
+- `/data`: Direktori ini berisi dataset mentah (`day.csv`) yang digunakan dalam proyek.
 - `/dashboard`: Direktori ini berisi file `dashboard.py` yang digunakan untuk membuat dashboard interaktif menggunakan Streamlit.
 - `notebook.ipynb`: File ini berisi proses analisis data secara lengkap menggunakan Jupyter Notebook / Google Colab.
 - `requirements.txt`: File ini berisi daftar *library* yang dibutuhkan untuk menjalankan proyek ini.
