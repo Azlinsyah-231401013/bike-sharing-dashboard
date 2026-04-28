@@ -41,20 +41,22 @@ def create_temp_cluster_df(df):
     return cluster_df
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-
 file_path = os.path.join(current_dir, "day.csv")
 
-day_df = pd.read_csv(file_path)
+try:
+    day_df = pd.read_csv(file_path)
+except FileNotFoundError:
+    st.error(f"File day.csv tidak ditemukan di {file_path}. Pastikan file diletakkan di direktori yang sama dengan dashboard.py")
+    st.stop()
 
 day_df["dteday"] = pd.to_datetime(day_df["dteday"])
-
 day_df['season'] = day_df['season'].map({
     1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'
 })
 
 with st.sidebar:
     st.title("Bike Sharing Dashboard 🚲")
-
+    
     min_date = day_df["dteday"].min()
     max_date = day_df["dteday"].max()
     
@@ -76,87 +78,111 @@ temp_cluster_df = create_temp_cluster_df(main_df)
 st.header('Bike Sharing Analysis Dashboard ✨')
 
 col1, col2, col3 = st.columns(3)
-
 with col1:
     total_rent = main_df.cnt.sum()
     st.metric("Total Peminjaman", value=f"{total_rent:,}")
-
 with col2:
     avg_casual = int(main_df.casual.mean())
-    st.metric("Rata-rata Kasual", value=avg_casual)
-
+    st.metric("Rata-rata Kasual", value=f"{avg_casual:,}")
 with col3:
     avg_registered = int(main_df.registered.mean())
-    st.metric("Rata-rata Terdaftar", value=avg_registered)
+    st.metric("Rata-rata Terdaftar", value=f"{avg_registered:,}")
 
-st.subheader('Daily Rental Trend')
-fig, ax = plt.subplots(figsize=(16, 8))
-ax.plot(
-    daily_rent_df["dteday"],
-    daily_rent_df["total_count"],
-    marker='o', 
-    linewidth=2,
-    color="#72BCD4"
+st.markdown("---")
+
+st.subheader("1. Tren Rata-rata Peminjaman Berdasarkan Musim")
+fig1, ax1 = plt.subplots(figsize=(10, 5))
+sns.barplot(
+    x="season", 
+    y="avg_count",
+    data=seasonal_rent_df.sort_values(by="avg_count", ascending=False),
+    palette="viridis",
+    ax=ax1
 )
-ax.set_title("Tren Peminjaman Sepeda Harian", fontsize=20)
-ax.tick_params(axis='y', labelsize=15)
-ax.tick_params(axis='x', labelsize=12)
-st.pyplot(fig)
+ax1.set_title("Rata-rata Peminjaman per Musim (2011-2012)", fontsize=15)
+ax1.set_ylabel("Rata-rata Peminjaman Harian")
+ax1.set_xlabel("Musim")
 
-st.subheader("Analisis Musim dan Perilaku Pengguna")
+for p in ax1.patches:
+    ax1.annotate(format(p.get_height(), '.0f'), 
+                (p.get_x() + p.get_width() / 2., p.get_height()), 
+                ha = 'center', va = 'center', xytext = (0, 8), textcoords = 'offset points', weight='bold')
 
-col_a, col_b = st.columns(2)
+st.pyplot(fig1)
 
-with col_a:
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.barplot(
-        x="season", 
-        y="avg_count",
-        data=seasonal_rent_df.sort_values(by="avg_count", ascending=False),
-        palette="viridis",
-        ax=ax
+with st.expander("Lihat Penjelasan (Insight)"):
+    st.write(
+        """
+        Berdasarkan grafik di atas, **Musim Gugur (Fall)** adalah musim puncak penyewaan dengan rata-rata tertinggi, 
+        disusul oleh Musim Panas (Summer). Sebaliknya, **Musim Semi (Spring)** memiliki tingkat rata-rata peminjaman paling rendah.
+        """
     )
-    ax.set_title("Rata-rata Peminjaman per Musim", fontsize=15)
-    ax.set_ylabel(None)
-    ax.set_xlabel(None)
-    st.pyplot(fig)
 
-with col_b:
-    melted_user_df = pd.melt(
-        workingday_user_df, 
-        id_vars=['workingday'], 
-        value_vars=['casual', 'registered'],
-        var_name='user_type', 
-        value_name='avg_count'
+st.markdown("---")
+
+st.subheader("2. Perbandingan Perilaku Pengguna (Hari Kerja vs Akhir Pekan)")
+melted_user_df = pd.melt(
+    workingday_user_df, 
+    id_vars=['workingday'], 
+    value_vars=['casual', 'registered'],
+    var_name='user_type', 
+    value_name='avg_count'
+)
+
+melted_user_df['user_type'] = melted_user_df['user_type'].map({
+    'casual': 'Kasual',
+    'registered': 'Terdaftar'
+})
+
+fig2, ax2 = plt.subplots(figsize=(10, 5))
+sns.barplot(
+    x="workingday", 
+    y="avg_count", 
+    hue="user_type", 
+    data=melted_user_df,
+    palette=["#FF9999", "#99FF99"],
+    ax=ax2
+)
+ax2.set_title("Rata-rata Pengguna Kasual vs Terdaftar (2011-2012)", fontsize=15)
+ax2.set_ylabel("Rata-rata Peminjaman Harian")
+ax2.set_xlabel("Tipe Hari")
+
+for p in ax2.patches:
+    ax2.annotate(format(p.get_height(), '.0f'), 
+                (p.get_x() + p.get_width() / 2., p.get_height()), 
+                ha = 'center', va = 'center', xytext = (0, 8), textcoords = 'offset points', weight='bold')
+
+st.pyplot(fig2)
+
+with st.expander("Lihat Penjelasan (Insight)"):
+    st.write(
+        """
+        Terlihat pola kontras: Pengguna **Terdaftar (Registered)** mendominasi pada **Hari Kerja**, menandakan sepeda digunakan untuk 
+        mobilitas harian komuter. Namun, pada **Akhir Pekan (Weekend/Holiday)**, jumlah penyewaan oleh pengguna terdaftar menurun, 
+        sementara pengguna **Kasual** melonjak tajam lebih dari dua kali lipat untuk kebutuhan rekreasi.
+        """
     )
-    
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.barplot(
-        x="workingday", 
-        y="avg_count", 
-        hue="user_type", 
-        data=melted_user_df,
-        palette=["#FF9999", "#99FF99"],
-        ax=ax
-    )
-    ax.set_title("User Behavior: Working Day vs Weekend", fontsize=15)
-    ax.set_ylabel(None)
-    ax.set_xlabel(None)
-    st.pyplot(fig)
 
-st.subheader("Advanced Analysis: Temperature Clustering")
-st.write("Melihat pengaruh suhu terhadap rata-rata peminjaman sepeda.")
+st.markdown("---")
 
-fig, ax = plt.subplots(figsize=(12, 6))
+st.subheader("3. Advanced Analysis: Temperature Clustering")
+fig3, ax3 = plt.subplots(figsize=(10, 5))
 sns.barplot(
     x="temp_cluster", 
     y="avg_count",
-    data=temp_cluster_df,
+    data=temp_cluster_df.sort_values(by="avg_count", ascending=False),
     palette="YlOrRd",
-    ax=ax
+    ax=ax3
 )
-ax.set_ylabel("Rata-rata Peminjaman")
-ax.set_xlabel("Klaster Suhu")
-st.pyplot(fig)
+ax3.set_title("Rata-rata Peminjaman Sepeda Berdasarkan Klaster Suhu", fontsize=15)
+ax3.set_ylabel("Rata-rata Peminjaman Harian")
+ax3.set_xlabel("Klaster Suhu")
+
+for p in ax3.patches:
+    ax3.annotate(format(p.get_height(), '.0f'), 
+                (p.get_x() + p.get_width() / 2., p.get_height()), 
+                ha = 'center', va = 'center', xytext = (0, 8), textcoords = 'offset points', weight='bold')
+
+st.pyplot(fig3)
 
 st.caption('Copyright (c) Azlinsyah 2026 - DBS Coding Camp')
